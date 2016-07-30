@@ -1,4 +1,4 @@
 #!/bin/bash
 ENV_DIR=~/git/env_twitter
 . $ENV_DIR/bin/activate
-python main.py
+python ~/git/uydmusic/main.py
