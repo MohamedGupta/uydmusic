@@ -1,20 +1,19 @@
 #!/usr/bin/env python
 import twitter, twitter_config
-import untangle, pickle
+import untangle
 import youtube_search
 from os import path
 from datetime import datetime
 
 
-cred = next(acct for acct in twitter_config.accounts if acct['username'] == 
-            'UYDMusic')
-last_epfile = '/home/pi/git/uydmusic/last_ep.p'
+cred = twitter_config.accounts['UYDMusic']
+last_epfile = '/home/pi/git/uydmusic/last_ep.date'
 
 def tweet_uyd(api):
     if path.isfile(last_epfile):
-        last_ep = pickle.load(open(last_epfile, 'r'))
+        last_ep = datetime.strptime(open(last_epfile, 'r').read(), '%a, %d %b %Y %H:%M:%S +0000')
     else:
-        last_ep = datetime.strptime('Mon, 01 Feb 2016 19:51:00 +0000', '%a, %d %b %Y %H:%M:%S +0000')
+        last_ep = datetime.strptime('Fri, 15 Jul 2016 19:51:00 +0000', '%a, %d %b %Y %H:%M:%S +0000')
 
     #req = requests.get('http://uhhyeahdude.com/podcast/')
     #feed = xml.etree.ElementTree.parse(req.content).getroot()
@@ -22,20 +21,19 @@ def tweet_uyd(api):
     eps = feed.rss.channel.item
     new_eps = []
     for ep in eps:
-        pubdate = ep.pubDate.cdata
-        pubdate = datetime.strptime(pubdate, '%a, %d %b %Y %H:%M:%S +0000')
+        pubdate = datetime.strptime(ep.pubDate.cdata, '%a, %d %b %Y %H:%M:%S +0000')
         if pubdate > last_ep:
             new_eps.append(ep)
             last_ep = pubdate
 
     if new_eps == []:
-        print 'No new eps'
+        #print 'No new eps'
         return
 
-    pickle.dump(last_ep, open(last_epfile, 'w'))
+    #pickle.dump(last_ep, open(last_epfile, 'w'))
+    open(last_epfile, 'w').write(last_ep.strftime('%a, %d %b %Y %H:%M:%S +0000'))
     for ep in reversed(new_eps):
         desc = ep.description.cdata
-        #words = re.findall(r'[\w]+', desc)
         desc = desc.replace('\n', ' ').replace('\t', ' ')
         words = desc.split(' ')
         if set(['intro:', 'outro:', 'http://uhhyeahdude.com']).issubset(set(words)):
@@ -45,7 +43,7 @@ def tweet_uyd(api):
             outro = ' '.join(words[words.index('outro:')+1:words.index('http://uhhyeahdude.com')])
             outro_url = youtube_search.search(outro)
             api.PostUpdate('{0} outro: {1} {2}'.format(ep.title.cdata, outro, outro_url))
-
+            #print 'Posting {0}'.format(ep.pubDate.cdata)
             
 if __name__ == '__main__':
     try:
